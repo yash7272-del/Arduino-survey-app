@@ -1,0 +1,1926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#07090c">
+<title>Smart Map Robot — Ultra Pro</title>
+
+<style>
+:root{
+  --bg:#07090c;
+  --card:#101418;
+  --card2:#151b21;
+  --line:#2a323a;
+  --green:#1f9d3a;
+  --green2:#4f8;
+  --text:#eaf2f5;
+  --muted:#8ba0ae;
+  --red:#e33;
+  --blue:#5cf;
+  --yellow:#fb0;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:system-ui,-apple-system,Segoe UI,sans-serif;
+}
+header{
+  position:sticky;top:0;z-index:5;background:#090c10;
+  display:flex;flex-wrap:wrap;align-items:center;gap:8px;
+  padding:12px;border-bottom:1px solid var(--line);
+}
+header h1{font-size:18px;margin:0}
+header small{display:block;font-size:11px;color:var(--muted)}
+.pill{
+  border:1px solid var(--line);border-radius:20px;
+  padding:5px 9px;font-size:12px;
+}
+.ok{color:var(--green2);border-color:var(--green2)}
+.bad{color:#ff6868;border-color:#ff6868}
+.warn{color:var(--yellow);border-color:var(--yellow)}
+main{
+  display:grid;grid-template-columns:minmax(0,1fr) 320px;
+  gap:12px;padding:12px;align-items:start;
+}
+.card,#mapcard{
+  background:var(--card);border:1px solid var(--line);
+  border-radius:12px;padding:12px;margin-bottom:12px;
+  min-width:0;
+}
+h2,h3{margin:0 0 10px}
+h2{font-size:18px}h3{font-size:15px}
+button,select{
+  background:var(--card2);color:var(--text);
+  border:1px solid var(--line);border-radius:8px;
+  padding:9px 11px;margin:3px;cursor:pointer;
+  max-width:100%;transition:background .15s,border-color .15s;
+}
+button:hover{border-color:var(--blue)}
+button:focus-visible,input:focus-visible,select:focus-visible{
+  outline:2px solid var(--blue);outline-offset:2px;
+}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.g{background:#145c2a;border-color:#247b3a}
+button.r{background:#781a1a;border-color:#b22}
+button.on{border-color:var(--green2);color:var(--green2)}
+input,select{
+  background:#090c10;color:var(--text);
+  border:1px solid var(--line);border-radius:7px;padding:8px;
+}
+input:not([type=checkbox]):not([type=range]){width:100%;min-width:0}
+input[type=checkbox]{width:auto}
+input[type=range]{width:120px}
+label{font-size:13px}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin:6px 0}
+.row>*{min-width:0}
+.note{font-size:12px;color:var(--muted);line-height:1.5}
+.stat{font-size:13px;line-height:2}
+.stat b{color:var(--green2)}
+#view{
+  height:55vh;min-height:300px;max-height:680px;
+  overflow:auto;background:#05070a;border-radius:10px;
+  position:relative;display:flex;align-items:center;
+  justify-content:center;
+}
+#grid{
+  display:grid;gap:2px;margin:auto;padding:12px;
+  grid-template-columns:repeat(40,var(--s,30px));
+  transform-origin:center;transition:transform .2s;
+}
+#grid.d3{transform:perspective(800px) rotateX(48deg)}
+.c{
+  width:var(--s,30px);height:var(--s,30px);
+  border-radius:3px;background:#12171b;
+  border:1px solid #20272e;
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;position:relative;cursor:pointer;
+  overflow:hidden;user-select:none;
+}
+.c.f{background:#1f9d3a;border-color:#278b3d}
+.c.o{background:#a91f2a;border-color:#f55}
+.c.u{background:#12171b}
+.c.rt{box-shadow:inset 0 0 0 2px var(--blue)}
+.c.dest{outline:2px solid var(--yellow);z-index:1}
+.c.sel{outline:2px solid white;z-index:2}
+.c.robot{font-size:17px}
+#empty{
+  position:absolute;top:42%;width:100%;
+  text-align:center;color:var(--muted);
+  pointer-events:none;padding:10px;
+}
+#view.scan{box-shadow:inset 0 0 0 2px var(--green2)}
+#list{max-height:190px;overflow:auto}
+.item{
+  padding:8px;border-bottom:1px solid var(--line);
+  font-size:13px;cursor:pointer;overflow-wrap:anywhere;
+}
+.item:hover{background:var(--card2)}
+#log{
+  font:11px/1.6 ui-monospace,monospace;
+  max-height:180px;overflow:auto;overflow-wrap:anywhere;
+  color:#a8bac7;white-space:pre-wrap;
+}
+#toast{
+  position:fixed;z-index:20;bottom:15px;left:50%;
+  transform:translateX(-50%);background:#145c2a;
+  padding:12px 16px;border-radius:8px;
+  opacity:0;pointer-events:none;transition:opacity .2s;
+  max-width:90%;text-align:center;
+}
+#toast.s{opacity:1}
+.legend{display:inline-flex;align-items:center;gap:5px;margin:4px 8px 4px 0;font-size:12px}
+.swatch{width:12px;height:12px;border-radius:3px}
+hr{border:0;border-top:1px solid var(--line);margin:12px 0}
+#batterybar{height:7px;background:#25303a;border-radius:8px;overflow:hidden}
+#batteryfill{height:100%;width:0;background:var(--green2);transition:width .2s}
+.hidden{display:none!important}
+@media(max-width:850px){
+  main{grid-template-columns:1fr;padding:8px}
+  header{position:relative}
+  #view{height:48vh;min-height:270px}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+
+<body>
+<header>
+  <h1>🤖 Smart Map Robot
+    <small>Autonomous Mapping &amp; Survey System</small>
+  </h1>
+  <span id="conn" class="pill bad">● Disconnected</span>
+  <span class="pill">🔋 <b id="bat">--</b>%</span>
+  <span class="pill">Speed <b id="spd">0</b> cm/s</span>
+  <span class="pill">Distance <b id="dst">0</b> cm</span>
+  <span class="pill">Time <b id="tim">00:00</b></span>
+  <span id="mode" class="pill warn">MODE: NONE</span>
+</header>
+
+<main>
+<section id="mapcard" class="card">
+  <div class="row">
+    <button id="b2d" class="on">2D Map</button>
+    <button id="b3d">3D Map</button>
+    <button id="zin">＋ Zoom</button>
+    <button id="zout">－ Zoom</button>
+    <button id="fit">⌖ Fit</button>
+  </div>
+
+  <div id="view">
+    <div id="grid" aria-label="Robot map"></div>
+    <div id="empty">Connect the robot or enter Demo Mode, then start a survey.</div>
+  </div>
+
+  <div class="row">
+    <button id="start" class="g">▶ Start Survey</button>
+    <button id="pause">❚❚ Pause</button>
+    <button id="stop" class="r">■ Stop Survey</button>
+    <button id="nav">➤ Navigate</button>
+    <button id="voice">🎤 Start Voice</button>
+  </div>
+
+  <hr>
+  <h3>Manual Robot Controls</h3>
+  <div class="row">
+    <button data-m="F">▲ Forward</button>
+    <button data-m="L">◀ Left</button>
+    <button data-m="B">▼ Backward</button>
+    <button data-m="R">▶ Right</button>
+    <button id="estop" class="r">⛔ EMERGENCY STOP</button>
+  </div>
+  <div class="row">
+    <label>Speed:
+      <input id="spdset" type="range" min="10" max="100" value="40">
+      <b id="spdv">40</b>%
+    </label>
+  </div>
+  <p class="note">
+    Hold a direction button to move. Release to request a stop.
+    A physical emergency-stop circuit and firmware motor timeout
+    are required for dependable stopping.
+  </p>
+
+  <hr>
+  <h3>Map Legend</h3>
+  <span class="legend"><i class="swatch" style="background:#1f9d3a"></i>Free / explored</span>
+  <span class="legend"><i class="swatch" style="background:#a91f2a"></i>Obstacle</span>
+  <span class="legend"><i class="swatch" style="background:#12171b;border:1px solid #46515a"></i>Unknown</span>
+  <span class="legend"><i class="swatch" style="background:#fb0"></i>Destination outline</span>
+  <span class="legend"><i class="swatch" style="background:#5cf"></i>Route</span>
+</section>
+
+<aside>
+  <section class="card">
+    <h3>Bluetooth Connection</h3>
+    <div class="row">
+      <button id="cble" class="g">Connect BLE Device</button>
+      <button id="reconnect">Reconnect Saved Device</button>
+      <button id="cdemo">Demo Mode</button>
+      <button id="cdis">Disconnect</button>
+    </div>
+    <div class="stat">Status: <b id="bleStatus">Disconnected</b></div>
+    <div class="stat">Last message: <b id="lastmsg">None</b></div>
+    <p class="note">
+      Chrome requires HTTPS or localhost and user permission.
+      Reconnection works only for a previously authorized compatible BLE device.
+      Classic Bluetooth SPP is not supported by Web Bluetooth.
+    </p>
+  </section>
+
+  <section class="card">
+    <h3>Robot Telemetry</h3>
+    <div class="stat">Heading: <b id="heading">0°</b></div>
+    <div class="stat">Average speed: <b id="avg">0 cm/s</b></div>
+    <div class="stat">Survey duration: <b id="duration">0 s</b></div>
+    <div class="stat">Leg timer: <b id="leg">0 s</b></div>
+    <div class="stat">Connection errors: <b id="errors">0</b></div>
+    <div class="stat">Invalid messages: <b id="invalid">0</b></div>
+    <div id="batterybar"><div id="batteryfill"></div></div>
+  </section>
+
+  <section class="card">
+    <h3>Map Information</h3>
+    <div class="stat">Discovered cells: <b id="i1">0</b></div>
+    <div class="stat">Free cells: <b id="i2">0</b></div>
+    <div class="stat">Obstacles: <b id="i3">0</b></div>
+    <div class="stat">Unknown cells in grid: <b id="unknown">1600</b></div>
+    <div class="stat">Explored area: <b id="area">0 cm²</b></div>
+    <div class="stat">Map boundary: <b id="bb">Not mapped</b></div>
+    <div class="stat">Cell size: <b id="cellsize">2 × 2 cm</b></div>
+  </section>
+
+  <section class="card">
+    <h3>Map Editor</h3>
+    <p class="note">Select a discovered cell to rename it or edit its classification.</p>
+    <div class="stat">Selected: <b id="sel">None</b></div>
+    <label>Cell name
+      <input id="cellname" maxlength="32" placeholder="e.g. Home or Gate">
+    </label>
+    <div class="row">
+      <button id="rename">Save Name</button>
+      <button id="delname">Delete Name</button>
+    </div>
+    <label>Cell classification
+      <select id="celltype">
+        <option value="f">Free / explored</option>
+        <option value="o">Obstacle</option>
+        <option value="u">Unknown</option>
+      </select>
+    </label>
+    <div class="row">
+      <button id="applytype">Apply Classification</button>
+      <button id="gotocell" class="g">Go to Selected</button>
+    </div>
+    <div class="row">
+      <button id="undo">Undo Edit</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <h3>Destinations &amp; Blocks</h3>
+    <input id="search" placeholder="Search A1 or a saved name">
+    <div id="list"></div>
+    <div class="row">
+      <button id="navname">Navigate to Name/Cell</button>
+      <button id="clearroute">Clear Route</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <h3>Data Management</h3>
+    <div class="row">
+      <button id="exp" class="g">Export JSON</button>
+      <button id="csv">Export CSV</button>
+      <button id="imp">Import JSON</button>
+      <button id="backup">Download Backup</button>
+    </div>
+    <input id="file" type="file" hidden accept=".json,application/json">
+    <label>Map name
+      <input id="mapname" maxlength="80" placeholder="My survey map">
+    </label>
+    <div class="row">
+      <button id="savename">Save Map Name</button>
+      <button id="restore">Restore Local Backup</button>
+      <button id="clr" class="r">Reset Map</button>
+    </div>
+    <div class="stat">Storage: <b id="storage">Checking…</b></div>
+    <p class="note">Data is stored locally in this browser. Export backups regularly.
+    Browser storage is not encrypted or a secure multi-user database.</p>
+  </section>
+
+  <section class="card">
+    <h3>Developer Diagnostics Centre</h3>
+    <div class="stat">Application: <b id="appstatus">Ready</b></div>
+    <div class="stat">Telemetry: <b id="telstatus">Waiting</b></div>
+    <div class="stat">Last command: <b id="lastcmd">None</b></div>
+    <div class="stat">Navigation: <b id="navstatus">Idle</b></div>
+    <div class="row">
+      <button id="test">Run Local Tests</button>
+      <button id="clearlog">Clear Logs</button>
+      <button id="exportlog">Export Logs</button>
+    </div>
+    <div id="log" aria-live="polite"></div>
+  </section>
+</aside>
+</main>
+
+<div id="toast" role="status"></div>
+
+<script>
+'use strict';
+
+/* =========================================================
+   SMART MAP ROBOT
+   Single-file frontend.
+   Compatible BLE protocol described in the comments below.
+   ========================================================= */
+
+const $ = id => document.getElementById(id);
+const CONFIG = Object.freeze({
+  grid: 40,
+  cellCm: 2,
+  defaultSpeed: 40,
+  storageKey: 'smart_map_robot_ultra_v2',
+  backupKey: 'smart_map_robot_backup_v2',
+  maxLog: 150,
+  maxSpeedTelemetry: 200
+});
+
+const NUS = {
+  service: '6e400001-b5a3-f393-e0a9-e50e24dcca9e',
+  tx:      '6e400003-b5a3-f393-e0a9-e50e24dcca9e',
+  rx:      '6e400002-b5a3-f393-e0a9-e50e24dcca9e'
+};
+
+/*
+ ESP32 -> browser, newline terminated:
+ T,<millis>,<speed_cm_s>,<heading_degrees>
+ O,<front_distance_cm>
+ B,<battery_percent>
+ H,<heading_degrees>
+ S,<state>
+ A,<ok|fail>
+ E,<error_code>
+ M,<done|fail>
+ L,<elapsed_ms>,<distance_cm>
+ V,stop
+
+ Browser -> ESP32:
+ CMD,F | CMD,B | CMD,L | CMD,R | CMD,X
+ SPD,<10-100>
+ SURVEY,START | SURVEY,STOP | SURVEY,PAUSE | SURVEY,RESUME
+ ESTOP
+ NAV,<cell_id>,<x_cm>,<y_cm>
+ MOVE,<heading_degrees>,<distance_cm>
+
+ Firmware must explicitly implement the commands it supports.
+*/
+
+const state = {
+  cells: {},
+  names: {},
+  mapName: 'My survey map',
+  meta: { createdAt: null, updatedAt: null },
+  gridW: CONFIG.grid,
+  gridH: CONFIG.grid,
+  robotCell: null
+};
+
+const robot = {
+  x: CONFIG.grid * CONFIG.cellCm / 2,
+  y: CONFIG.grid * CONFIG.cellCm / 2,
+  heading: 0,
+  speed: 0,
+  distance: 0,
+  battery: null,
+  lastT: null,
+  live: false,
+  lastTelemetry: 0
+};
+
+let transport = null;
+let transportMode = 'NONE';
+let bleDevice = null;
+let bleServer = null;
+let rxCharacteristic = null;
+let rxBuffer = '';
+let demoTimer = null;
+let demo = null;
+
+let selected = null;
+let destination = null;
+let route = [];
+let surveying = false;
+let paused = false;
+let moving = false;
+let startedAt = 0;
+let elapsedBeforePause = 0;
+let lastFrame = 0;
+let connectionErrors = 0;
+let invalidMessages = 0;
+let lastCommand = '';
+let undoStack = [];
+let navigationQueue = [];
+let navigationTimer = null;
+let zoom = 30;
+let recognition = null;
+let listening = false;
+let manualPointer = null;
+let toastTimer = null;
+
+const clamp = (n, a, b) => Math.min(b, Math.max(a, n));
+const validCell = (c, r) =>
+  Number.isInteger(c) && Number.isInteger(r) &&
+  c >= 0 && r >= 0 && c < state.gridW && r < state.gridH;
+
+function cellId(c, r) {
+  let n = c + 1, letters = '';
+  while (n > 0) {
+    const rem = (n - 1) % 26;
+    letters = String.fromCharCode(65 + rem) + letters;
+    n = Math.floor((n - 1) / 26);
+  }
+  return letters + (r + 1);
+}
+
+function parseCell(id) {
+  const m = /^([A-Z]{1,3})([1-9]\d*)$/i.exec(String(id).trim());
+  if (!m) return null;
+  let c = 0;
+  for (const ch of m[1].toUpperCase()) {
+    c = c * 26 + ch.charCodeAt(0) - 64;
+  }
+  c -= 1;
+  const r = Number(m[2]) - 1;
+  return validCell(c, r) ? { c, r } : null;
+}
+
+function positionCell(x, y) {
+  return {
+    c: Math.floor(x / CONFIG.cellCm),
+    r: Math.floor(y / CONFIG.cellCm)
+  };
+}
+
+function toast(message) {
+  $('toast').textContent = message;
+  $('toast').classList.add('s');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $('toast').classList.remove('s'), 2600);
+}
+
+function log(message, level = 'info') {
+  const stamp = new Date().toLocaleTimeString();
+  const line = `[${stamp}] [${level.toUpperCase()}] ${String(message)}`;
+  const el = $('log');
+  el.textContent = (line + '\n' + el.textContent)
+    .split('\n').slice(0, CONFIG.maxLog).join('\n');
+  if (level === 'error') connectionErrors++;
+  $('errors').textContent = connectionErrors;
+}
+
+function say(message) {
+  toast(message);
+  if ('speechSynthesis' in window) {
+    try {
+      speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(message);
+      utterance.rate = 1;
+      speechSynthesis.speak(utterance);
+    } catch (e) {
+      log('Speech output unavailable: ' + e.message);
+    }
+  }
+}
+
+function snapshot() {
+  return JSON.stringify({
+    cells: state.cells,
+    names: state.names,
+    mapName: state.mapName,
+    meta: state.meta,
+    gridW: state.gridW,
+    gridH: state.gridH
+  });
+}
+
+function pushUndo() {
+  undoStack.push(snapshot());
+  if (undoStack.length > 30) undoStack.shift();
+}
+
+function restoreSnapshot(s) {
+  const d = JSON.parse(s);
+  validateMap(d);
+  state.cells = d.cells;
+  state.names = d.names;
+  state.mapName = d.mapName;
+  state.meta = d.meta;
+  state.gridW = d.gridW;
+  state.gridH = d.gridH;
+  selected = null;
+  destination = null;
+  route = [];
+  saveData(false);
+  draw();
+}
+
+function undoEdit() {
+  if (!undoStack.length) return toast('No edit to undo.');
+  try {
+    restoreSnapshot(undoStack.pop());
+    toast('Last map edit undone.');
+  } catch (e) {
+    log('Undo failed: ' + e.message, 'error');
+  }
+}
+
+function normalizeMapData(d) {
+  if (!d || typeof d !== 'object') throw Error('Map must be an object.');
+  const src = d.state || d;
+  const cells = src.cells || {};
+  const names = src.names || {};
+  const out = {
+    cells: {},
+    names: {},
+    mapName: String(src.mapName || 'Imported map').slice(0, 80),
+    meta: src.meta && typeof src.meta === 'object' ? src.meta : {},
+    gridW: clamp(Number(src.gridW || src.gw || CONFIG.grid), 1, 100),
+    gridH: clamp(Number(src.gridH || src.gh || CONFIG.grid), 1, 100)
+  };
+
+  for (const [key, value] of Object.entries(cells)) {
+    const p = parseImportedCell(key, out.gridW, out.gridH);
+    if (!p) continue;
+    if (!['f', 'o', 'u'].includes(value)) continue;
+    out.cells[cellId(p.c, p.r)] = value;
+  }
+
+  for (const [key, value] of Object.entries(names)) {
+    const p = parseImportedCell(key, out.gridW, out.gridH);
+    if (!p || typeof value !== 'string') continue;
+    if (out.cells[cellId(p.c, p.r)]) {
+      out.names[cellId(p.c, p.r)] = value.slice(0, 32);
+    }
+  }
+  return out;
+}
+
+function parseImportedCell(key, width, height) {
+  const m = /^([A-Z]{1,3})([1-9]\d*)$/i.exec(String(key));
+  if (!m) return null;
+  let c = 0;
+  for (const ch of m[1].toUpperCase()) {
+    c = c * 26 + ch.charCodeAt(0) - 64;
+  }
+  c--;
+  const r = Number(m[2]) - 1;
+  return c >= 0 && r >= 0 && c < width && r < height ? { c, r } : null;
+}
+
+function validateMap(d) {
+  const normalized = normalizeMapData(d);
+  Object.assign(state, normalized);
+  return true;
+}
+
+function saveData(makeBackup = true) {
+  try {
+    state.meta.updatedAt = new Date().toISOString();
+    if (makeBackup) {
+      localStorage.setItem(CONFIG.backupKey, snapshot());
+    }
+    localStorage.setItem(CONFIG.storageKey, snapshot());
+    $('storage').textContent = 'Saved locally';
+    return true;
+  } catch (e) {
+    $('storage').textContent = 'Storage unavailable';
+    log('Storage error: ' + e.message, 'error');
+    return false;
+  }
+}
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(CONFIG.storageKey);
+    if (raw) {
+      validateMap(JSON.parse(raw));
+      $('mapname').value = state.mapName;
+      log('Saved map loaded.');
+    } else {
+      state.meta.createdAt = new Date().toISOString();
+      saveData();
+    }
+  } catch (e) {
+    log('Saved map could not be loaded: ' + e.message, 'error');
+    toast('Saved map invalid. You can restore a backup or import a map.');
+  }
+}
+
+function restoreBackup() {
+  try {
+    const raw = localStorage.getItem(CONFIG.backupKey);
+    if (!raw) return toast('No local backup found.');
+    if (!confirm('Restore the last backup? Current map data will be replaced.')) return;
+    validateMap(JSON.parse(raw));
+    saveData(false);
+    $('mapname').value = state.mapName;
+    draw();
+    toast('Backup restored.');
+  } catch (e) {
+    log('Backup restore failed: ' + e.message, 'error');
+    toast('Backup could not be restored.');
+  }
+}
+
+/* ==================== MAPPING ==================== */
+
+function markCell(c, r, classification) {
+  if (!validCell(c, r)) return false;
+  if (!['f', 'o', 'u'].includes(classification)) return false;
+  const k = cellId(c, r);
+  if (classification === 'u') {
+    delete state.cells[k];
+  } else {
+    state.cells[k] = classification;
+  }
+  return true;
+}
+
+function integrateTelemetry(tms, speed, heading) {
+  if (![tms, speed, heading].every(Number.isFinite)) return;
+  if (speed < 0 || speed > CONFIG.maxSpeedTelemetry) {
+    invalidMessages++;
+    $('invalid').textContent = invalidMessages;
+    return;
+  }
+
+  heading = ((heading % 360) + 360) % 360;
+
+  if (robot.lastT !== null && tms < robot.lastT) {
+    // ESP32 millis() rollover or reset: reset the timing baseline.
+    robot.lastT = tms;
+    robot.speed = speed;
+    robot.heading = heading;
+    return;
+  }
+
+  if (!surveying || paused) {
+    robot.lastT = tms;
+    robot.speed = speed;
+    robot.heading = heading;
+    robot.lastTelemetry = Date.now();
+    return;
+  }
+
+  if (robot.lastT !== null && tms > robot.lastT) {
+    const dt = (tms - robot.lastT) / 1000;
+
+    // Reject large gaps; do not draw a false straight line across them.
+    if (dt > 0 && dt <= 0.75) {
+      const distance = speed * dt;
+      const angle = heading * Math.PI / 180;
+      const steps = Math.max(1, Math.ceil(distance / (CONFIG.cellCm / 3)));
+
+      for (let i = 1; i <= steps; i++) {
+        const fraction = i / steps;
+        const nx = robot.x + Math.sin(angle) * distance * fraction;
+        const ny = robot.y - Math.cos(angle) * distance * fraction;
+        const p = positionCell(nx, ny);
+        markCell(p.c, p.r, 'f');
+      }
+
+      robot.x = clamp(
+        robot.x + Math.sin(angle) * distance,
+        0, state.gridW * CONFIG.cellCm - 0.01
+      );
+      robot.y = clamp(
+        robot.y - Math.cos(angle) * distance,
+        0, state.gridH * CONFIG.cellCm - 0.01
+      );
+      robot.distance += distance;
+    } else if (dt > 0.75) {
+      log('Telemetry gap; movement integration skipped.');
+    }
+  }
+
+  robot.lastT = tms;
+  robot.speed = speed;
+  robot.heading = heading;
+  robot.lastTelemetry = Date.now();
+  robot.live = true;
+
+  const p = positionCell(robot.x, robot.y);
+  markCell(p.c, p.r, 'f');
+  state.robotCell = cellId(p.c, p.r);
+
+  $('heading').textContent = heading.toFixed(0) + '°';
+  $('telstatus').textContent = 'Receiving';
+  saveData(false);
+  draw();
+}
+
+function markObstacle(distance) {
+  if (!Number.isFinite(distance) || distance <= 0 || distance > 200) return;
+  const angle = robot.heading * Math.PI / 180;
+  const x = robot.x + Math.sin(angle) * distance;
+  const y = robot.y - Math.cos(angle) * distance;
+  const p = positionCell(x, y);
+
+  if (!validCell(p.c, p.r)) {
+    log('Obstacle lies outside the current map boundary.');
+    return;
+  }
+
+  pushUndo();
+  markCell(p.c, p.r, 'o');
+  saveData();
+  draw();
+
+  if (moving && route.includes(cellId(p.c, p.r))) {
+    stopNavigation('Obstacle detected on planned route.');
+  }
+}
+
+/* ==================== MAP RENDERING ==================== */
+
+function draw() {
+  const grid = $('grid');
+  grid.style.setProperty('--s', zoom + 'px');
+  grid.style.gridTemplateColumns =
+    `repeat(${state.gridW}, var(--s))`;
+  grid.innerHTML = '';
+
+  const routeSet = new Set(route);
+  const rp = positionCell(robot.x, robot.y);
+  let free = 0, obstacles = 0;
+  const keys = Object.keys(state.cells);
+
+  for (let r = 0; r < state.gridH; r++) {
+    for (let c = 0; c < state.gridW; c++) {
+      const k = cellId(c, r);
+      const st = state.cells[k] || 'u';
+      const cell = document.createElement('button');
+      cell.type = 'button';
+      cell.className = 'c ' + st;
+      if (routeSet.has(k)) cell.classList.add('rt');
+      if (k === destination) cell.classList.add('dest');
+      if (k === selected) cell.classList.add('sel');
+
+      if (st === 'f') free++;
+      if (st === 'o') obstacles++;
+
+      cell.dataset.cell = k;
+      cell.setAttribute('aria-label',
+        `${k}, ${st === 'f' ? 'free' : st === 'o' ? 'obstacle' : 'unknown'}` +
+        (state.names[k] ? ', ' + state.names[k] : '')
+      );
+
+      if (k === selected) cell.textContent = '◆';
+      else if (k === destination) cell.textContent = '◎';
+      else if (c === rp.c && r === rp.r) {
+        cell.textContent = '🤖';
+        cell.classList.add('robot');
+      } else if (state.names[k] && zoom >= 26) {
+        cell.textContent = state.names[k].slice(0, 4);
+      } else if (st !== 'u' && zoom >= 32) {
+        cell.textContent = k;
+      }
+
+      cell.addEventListener('click', () => selectCell(k));
+      grid.appendChild(cell);
+    }
+  }
+
+  $('empty').style.display = keys.length ? 'none' : 'block';
+  $('view').classList.toggle('scan', surveying && !paused);
+  $('i1').textContent = keys.length;
+  $('i2').textContent = free;
+  $('i3').textContent = obstacles;
+  $('unknown').textContent =
+    state.gridW * state.gridH - keys.length;
+  $('area').textContent =
+    (free * CONFIG.cellCm * CONFIG.cellCm) + ' cm²';
+  $('dst').textContent = robot.distance.toFixed(1);
+  $('spd').textContent = robot.speed.toFixed(1);
+  $('avg').textContent = getElapsed() > 0
+    ? (robot.distance / getElapsed()).toFixed(1) + ' cm/s'
+    : '0 cm/s';
+  $('duration').textContent = getElapsed().toFixed(1) + ' s';
+  $('tim').textContent = formatTime(getElapsed());
+  $('bat').textContent = robot.battery === null ? '--' : robot.battery;
+  $('batteryfill').style.width =
+    robot.battery === null ? '0%' : robot.battery + '%';
+  $('bb').textContent = getBounds();
+  $('mapname').value = state.mapName;
+  renderList();
+  renderSelection();
+}
+
+function getBounds() {
+  const points = Object.keys(state.cells).map(parseCell).filter(Boolean);
+  if (!points.length) return 'Not mapped';
+  const cs = points.map(p => p.c);
+  const rs = points.map(p => p.r);
+  const w = (Math.max(...cs) - Math.min(...cs) + 1) * CONFIG.cellCm;
+  const h = (Math.max(...rs) - Math.min(...rs) + 1) * CONFIG.cellCm;
+  return `${w} × ${h} cm`;
+}
+
+function getElapsed() {
+  return elapsedBeforePause +
+    (surveying && !paused ? (Date.now() - startedAt) / 1000 : 0);
+}
+
+function formatTime(seconds) {
+  seconds = Math.max(0, Math.floor(seconds));
+  return String(Math.floor(seconds / 60)).padStart(2, '0') + ':' +
+    String(seconds % 60).padStart(2, '0');
+}
+
+function renderList() {
+  const query = $('search').value.toLowerCase();
+  const list = $('list');
+  list.innerHTML = '';
+
+  Object.keys(state.cells).sort().filter(k =>
+    (k + ' ' + (state.names[k] || '')).toLowerCase().includes(query)
+  ).forEach(k => {
+    const div = document.createElement('div');
+    div.className = 'item';
+    div.textContent =
+      `${k} ${state.names[k] || ''} — ` +
+      (state.cells[k] === 'o' ? 'Obstacle' : 'Free');
+    div.addEventListener('click', () => selectCell(k));
+    list.appendChild(div);
+  });
+}
+
+function selectCell(k) {
+  selected = k;
+  $('cellname').value = state.names[k] || '';
+  $('celltype').value = state.cells[k] || 'u';
+  renderSelection();
+  draw();
+}
+
+function renderSelection() {
+  $('sel').textContent = selected || 'None';
+}
+
+/* ==================== MAP EDITOR ==================== */
+
+$('rename').onclick = () => {
+  if (!selected || !state.cells[selected]) {
+    return toast('Select a discovered cell first.');
+  }
+
+  const value = $('cellname').value.trim();
+  pushUndo();
+
+  if (value) state.names[selected] = value.slice(0, 32);
+  else delete state.names[selected];
+
+  saveData();
+  draw();
+  toast('Cell name saved.');
+};
+
+$('delname').onclick = () => {
+  if (!selected || !state.names[selected]) {
+    return toast('Selected cell has no name.');
+  }
+  pushUndo();
+  delete state.names[selected];
+  $('cellname').value = '';
+  saveData();
+  draw();
+};
+
+$('applytype').onclick = () => {
+  if (!selected) return toast('Select a cell first.');
+  const p = parseCell(selected);
+  if (!p) return toast('Invalid cell.');
+  pushUndo();
+  markCell(p.c, p.r, $('celltype').value);
+  if (!state.cells[selected]) delete state.names[selected];
+  saveData();
+  draw();
+  toast('Cell classification updated.');
+};
+
+$('undo').onclick = undoEdit;
+
+/* ==================== NAVIGATION ==================== */
+
+function heuristic(a, b) {
+  return Math.abs(a.c - b.c) + Math.abs(a.r - b.r);
+}
+
+function astar(start, goal) {
+  if (!validCell(start.c, start.r) || !validCell(goal.c, goal.r)) return null;
+
+  const key = p => p.c + ',' + p.r;
+  const open = [{
+    c: start.c, r: start.r, g: 0,
+    f: heuristic(start, goal)
+  }];
+  const came = new Map();
+  const costs = new Map([[key(start), 0]]);
+  const closed = new Set();
+  let iterations = 0;
+
+  while (open.length && iterations++ < 20000) {
+    open.sort((a, b) => a.f - b.f);
+    const u = open.shift();
+    const uk = key(u);
+
+    if (closed.has(uk)) continue;
+    closed.add(uk);
+
+    if (u.c === goal.c && u.r === goal.r) {
+      const result = [];
+      let k = uk;
+      while (k) {
+        const [c, r] = k.split(',').map(Number);
+        result.unshift(cellId(c, r));
+        k = came.get(k);
+      }
+      return result;
+    }
+
+    for (const [dc, dr] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+      const v = { c: u.c + dc, r: u.r + dr };
+      if (!validCell(v.c, v.r)) continue;
+
+      const vk = key(v);
+      if (closed.has(vk)) continue;
+      if (state.cells[cellId(v.c, v.r)] !== 'f') continue;
+
+      const ng = u.g + 1;
+      if (ng >= (costs.get(vk) ?? Infinity)) continue;
+
+      costs.set(vk, ng);
+      came.set(vk, uk);
+      open.push({
+        ...v, g: ng,
+        f: ng + heuristic(v, goal)
+      });
+    }
+  }
+  return null;
+}
+
+function resolveDestination(text) {
+  text = text.trim();
+  const p = parseCell(text.toUpperCase());
+  if (p) return cellId(p.c, p.r);
+
+  const key = Object.keys(state.names).find(k =>
+    state.names[k].toLowerCase() === text.toLowerCase()
+  );
+  return key || null;
+}
+
+function planNavigation(k) {
+  if (surveying) return toast('Stop the survey before navigation.');
+  if (moving) return toast('Navigation is already active.');
+
+  const goal = parseCell(k);
+  if (!goal || state.cells[k] !== 'f') {
+    return toast('Destination must be a discovered free cell.');
+  }
+
+  const start = positionCell(robot.x, robot.y);
+  const startId = cellId(start.c, start.r);
+  if (state.cells[startId] !== 'f') {
+    return toast('Robot position is not on a known free cell.');
+  }
+
+  const planned = astar(start, goal);
+  if (!planned) {
+    route = [];
+    draw();
+    return toast('No known free route to ' + k);
+  }
+
+  destination = k;
+  route = planned;
+  draw();
+
+  if (planned.length < 2) return toast('Robot is already at ' + k);
+  if (!transport) return toast('Route planned. Connect the robot to execute it.');
+
+  if (!confirm(`Send robot to ${k}? The firmware must support MOVE commands.`)) return;
+
+  navigationQueue = [];
+  for (let i = 1; i < planned.length; i++) {
+    const a = parseCell(planned[i - 1]);
+    const b = parseCell(planned[i]);
+    const heading = b.c > a.c ? 90 :
+      b.c < a.c ? 270 :
+      b.r > a.r ? 180 : 0;
+    navigationQueue.push({ heading, cm: CONFIG.cellCm });
+  }
+
+  moving = true;
+  nextNavigationLeg();
+}
+
+function nextNavigationLeg() {
+  clearTimeout(navigationTimer);
+  if (!moving) return;
+
+  if (!navigationQueue.length) {
+    moving = false;
+    $('navstatus').textContent = 'Awaiting final confirmation';
+    toast('Route commands sent. Waiting for robot confirmation.');
+    return;
+  }
+
+  const leg = navigationQueue.shift();
+  $('navstatus').textContent = 'Sending movement command';
+
+  if (!sendCommand(`MOVE,${leg.heading},${leg.cm}`)) {
+    stopNavigation('Command could not be sent.');
+    return;
+  }
+
+  // A missing acknowledgement is a fault, not proof of arrival.
+  navigationTimer = setTimeout(() => {
+    stopNavigation('Navigation acknowledgement timed out.');
+  }, 5000);
+}
+
+function stopNavigation(reason) {
+  clearTimeout(navigationTimer);
+  moving = false;
+  navigationQueue = [];
+  $('navstatus').textContent = reason || 'Stopped';
+  if (transport) sendCommand('CMD,X');
+  if (reason) {
+    log(reason, 'error');
+    toast(reason);
+  }
+}
+
+$('gotocell').onclick = () => {
+  if (selected) planNavigation(selected);
+  else toast('Select a cell first.');
+};
+
+$('navname').onclick = () => {
+  const t = prompt('Enter a cell (A1) or saved destination name:');
+  if (!t) return;
+  const k = resolveDestination(t);
+  if (k) planNavigation(k);
+  else toast('Destination not found.');
+};
+
+$('nav').onclick = () => $('navname').click();
+
+$('clearroute').onclick = () => {
+  route = [];
+  destination = null;
+  if (moving) stopNavigation();
+  draw();
+};
+
+/* ==================== TRANSPORT / BLUETOOTH ==================== */
+
+function setConnection(t, mode = 'NONE') {
+  transport = t;
+  transportMode = mode;
+
+  $('conn').textContent = t ? '● Connected' : '● Disconnected';
+  $('conn').className = 'pill ' + (t ? 'ok' : 'bad');
+  $('mode').textContent = 'MODE: ' + mode;
+  $('mode').className = 'pill ' + (t ? 'ok' : 'warn');
+  $('bleStatus').textContent = t ? mode : 'Disconnected';
+}
+
+function sendCommand(command) {
+  if (!transport) {
+    log('Command not sent: disconnected — ' + command, 'error');
+    return false;
+  }
+
+  try {
+    const result = transport.send(command + '\n');
+    lastCommand = command;
+    $('lastcmd').textContent = command;
+    log('→ ' + command);
+    return result !== false;
+  } catch (e) {
+    log('Command send failed: ' + e.message, 'error');
+    return false;
+  }
+}
+
+function handleLine(line) {
+  line = line.trim();
+  if (!line) return;
+  $('lastmsg').textContent = line.slice(0, 90);
+  log('← ' + line);
+
+  const p = line.split(',');
+  const type = p[0];
+
+  if (type === 'T' && p.length >= 4) {
+    const [t, speed, heading] = p.slice(1, 4).map(Number);
+    if (![t, speed, heading].every(Number.isFinite)) {
+      invalidMessages++;
+      $('invalid').textContent = invalidMessages;
+      return;
+    }
+    $('leg').textContent = (t / 1000).toFixed(1);
+    integrateTelemetry(t, speed, heading);
+    return;
+  }
+
+  if (type === 'O' && Number.isFinite(Number(p[1]))) {
+    markObstacle(Number(p[1]));
+    return;
+  }
+
+  if (type === 'B') {
+    const b = Number(p[1]);
+    if (Number.isFinite(b) && b >= 0 && b <= 100) {
+      robot.battery = Math.round(b);
+      draw();
+    }
+    return;
+  }
+
+  if (type === 'H') {
+    const h = Number(p[1]);
+    if (Number.isFinite(h)) {
+      robot.heading = ((h % 360) + 360) % 360;
+      $('heading').textContent = robot.heading.toFixed(0) + '°';
+    }
+    return;
+  }
+
+  if (type === 'A') {
+    if (p[1] === 'ok') {
+      $('appstatus').textContent = 'Command acknowledged';
+    } else {
+      $('appstatus').textContent = 'Command rejected';
+      log('Firmware rejected command: ' + line, 'error');
+    }
+    return;
+  }
+
+  if (type === 'M') {
+    if (p[1] === 'done') nextNavigationLeg();
+    else stopNavigation('Robot reported navigation failure.');
+    return;
+  }
+
+  if (type === 'S') {
+    $('appstatus').textContent = p.slice(1).join(',');
+    return;
+  }
+
+  if (type === 'E') {
+    log('Robot firmware error: ' + p.slice(1).join(','), 'error');
+    return;
+  }
+
+  if (type === 'V' && p[1] === 'stop') {
+    stopSurvey();
+    return;
+  }
+
+  if (type === 'L') {
+    log('Movement report: ' + p.slice(1).join(','));
+    return;
+  }
+
+  invalidMessages++;
+  $('invalid').textContent = invalidMessages;
+  log('Unrecognized protocol message.', 'warn');
+}
+
+function makeLineParser() {
+  let buffer = '';
+  const decoder = new TextDecoder();
+
+  return {
+    feed(value) {
+      buffer += decoder.decode(value, { stream: true });
+      if (buffer.length > 16000) {
+        buffer = '';
+        log('Incoming buffer reset: message overflow.', 'error');
+        return;
+      }
+
+      let idx;
+      while ((idx = buffer.indexOf('\n')) >= 0) {
+        const line = buffer.slice(0, idx);
+        buffer = buffer.slice(idx + 1);
+        handleLine(line);
+      }
+    }
+  };
+}
+
+let lineParser = makeLineParser();
+
+async function connectBLE(device) {
+  if (!device) throw Error('Choose an authorized BLE device first.');
+  if (!navigator.bluetooth) {
+    throw Error('Web Bluetooth is unavailable. Try supported Chrome on HTTPS.');
+  }
+
+  if (transport) disconnect();
+
+  bleDevice = device;
+  device.addEventListener('gattserverdisconnected', onBLEDisconnected);
+
+  bleServer = await device.gatt.connect();
+  const service = await bleServer.getPrimaryService(NUS.service);
+  const tx = await service.getCharacteristic(NUS.tx);
+  rxCharacteristic = await service.getCharacteristic(NUS.rx);
+
+  lineParser = makeLineParser();
+  await tx.startNotifications();
+  tx.addEventListener('characteristicvaluechanged', event => {
+    lineParser.feed(event.target.value);
+  });
+
+  setConnection({
+    send: async text => {
+      const bytes = new TextEncoder().encode(text);
+      if (rxCharacteristic.writeValueWithResponse) {
+        await rxCharacteristic.writeValueWithResponse(bytes);
+      } else {
+        await rxCharacteristic.writeValue(bytes);
+      }
+      return true;
+    },
+    close: () => {
+      if (device.gatt.connected) device.gatt.disconnect();
+    }
+  }, 'LIVE BLE');
+
+  $('bleStatus').textContent = 'Connected: ' + (device.name || 'BLE device');
+  log('Connected to BLE device: ' + (device.name || 'unnamed'));
+  toast('BLE connected.');
+}
+
+function onBLEDisconnected() {
+  stopNavigation('Bluetooth disconnected.');
+  setConnection(null);
+  $('telstatus').textContent = 'Disconnected';
+  log('BLE device disconnected.', 'error');
+}
+
+$('cble').onclick = async () => {
+  try {
+    if (!navigator.bluetooth) {
+      throw Error('Web Bluetooth is unavailable in this browser.');
+    }
+    const device = await navigator.bluetooth.requestDevice({
+      filters: [{ services: [NUS.service] }],
+      optionalServices: [NUS.service]
+    });
+    await connectBLE(device);
+  } catch (e) {
+    log('Bluetooth connection failed: ' + e.message, 'error');
+    toast(e.message);
+  }
+};
+
+$('reconnect').onclick = async () => {
+  try {
+    if (!navigator.bluetooth || !navigator.bluetooth.getDevices) {
+      throw Error('Saved-device reconnection is not supported by this browser.');
+    }
+
+    const devices = await navigator.bluetooth.getDevices();
+    const device = devices.find(d => d.id === (bleDevice && bleDevice.id));
+
+    if (!device) {
+      throw Error('No previously authorized device found. Use Connect BLE Device.');
+    }
+
+    await connectBLE(device);
+  } catch (e) {
+    log('Reconnect failed: ' + e.message, 'error');
+    toast(e.message);
+  }
+};
+
+function disconnect() {
+  stopNavigation();
+  if (transport && transportMode === 'DEMO') {
+    clearInterval(demoTimer);
+    demoTimer = null;
+  }
+  try {
+    if (bleDevice && bleDevice.gatt && bleDevice.gatt.connected) {
+      bleDevice.gatt.disconnect();
+    }
+  } catch (e) {
+    log('Disconnect warning: ' + e.message, 'warn');
+  }
+  transport = null;
+  transportMode = 'NONE';
+  setConnection(null);
+}
+
+$('cdis').onclick = disconnect;
+
+/* ==================== DEMO SIMULATOR ==================== */
+
+function startDemo() {
+  disconnect();
+
+  demo = {
+    x: CONFIG.grid * CONFIG.cellCm / 2,
+    y: CONFIG.grid * CONFIG.cellCm / 2,
+    heading: 0,
+    t: 0,
+    on: false,
+    remaining: 0,
+    moving: false
+  };
+
+  const simTransport = {
+    send(line) {
+      const cmd = line.trim();
+
+      if (cmd === 'SURVEY,START') demo.on = true;
+      if (cmd === 'SURVEY,STOP' || cmd === 'ESTOP') {
+        demo.on = false;
+        demo.moving = false;
+      }
+      if (cmd === 'SURVEY,PAUSE') demo.on = false;
+      if (cmd === 'SURVEY,RESUME') demo.on = true;
+
+      if (cmd.startsWith('MOVE,')) {
+        const q = cmd.split(',');
+        demo.heading = Number(q[1]) || 0;
+        demo.remaining = Number(q[2]) || 0;
+        demo.moving = true;
+      }
+
+      if (cmd === 'CMD,X') demo.moving = false;
+      if (cmd.startsWith('CMD,') && cmd !== 'CMD,X') {
+        const direction = cmd.split(',')[1];
+        if (direction === 'F') demo.heading = 0;
+        if (direction === 'R') demo.heading = 90;
+        if (direction === 'B') demo.heading = 180;
+        if (direction === 'L') demo.heading = 270;
+      }
+
+      return true;
+    },
+    close() { clearInterval(demoTimer); }
+  };
+
+  setConnection(simTransport, 'DEMO');
+  resetRobot();
+  demoTimer = setInterval(() => {
+    if (!demo || !transport || transportMode !== 'DEMO') return;
+
+    demo.t += 200;
+    if (demo.on || demo.moving) {
+      const speed = 10;
+      const dt = 0.2;
+      const d = speed * dt;
+      const a = demo.heading * Math.PI / 180;
+
+      demo.x = clamp(demo.x + Math.sin(a) * d,
+        0, state.gridW * CONFIG.cellCm - 0.01);
+      demo.y = clamp(demo.y - Math.cos(a) * d,
+        0, state.gridH * CONFIG.cellCm - 0.01);
+
+      if (demo.moving) {
+        demo.remaining -= d;
+        if (demo.remaining <= 0) {
+          demo.moving = false;
+          handleLine('M,done');
+        }
+      }
+
+      handleLine(`T,${demo.t},${speed},${demo.heading}`);
+      handleLine('B,100');
+    }
+  }, 200);
+
+  toast('Demo mode connected. No physical robot is being controlled.');
+}
+
+function resetRobot() {
+  robot.x = state.gridW * CONFIG.cellCm / 2;
+  robot.y = state.gridH * CONFIG.cellCm / 2;
+  robot.heading = 0;
+  robot.speed = 0;
+  robot.distance = 0;
+  robot.lastT = null;
+  robot.live = false;
+}
+
+$('cdemo').onclick = startDemo;
+
+/* ==================== SURVEY CONTROLLER ==================== */
+
+function startSurvey() {
+  if (!transport) return toast('Connect BLE or start Demo Mode first.');
+  if (surveying) return toast('Survey already running.');
+
+  pushUndo();
+  resetRobot();
+  surveying = true;
+  paused = false;
+  elapsedBeforePause = 0;
+  startedAt = Date.now();
+  $('pause').textContent = '❚❚ Pause';
+
+  const p = positionCell(robot.x, robot.y);
+  markCell(p.c, p.r, 'f');
+
+  if (!sendCommand('SURVEY,START')) {
+    surveying = false;
+    return toast('Could not send survey command.');
+  }
+
+  $('appstatus').textContent = 'Surveying';
+  saveData();
+  draw();
+}
+
+function stopSurvey() {
+  if (!surveying) return;
+  surveying = false;
+  paused = false;
+  sendCommand('SURVEY,STOP');
+  $('pause').textContent = '❚❚ Pause';
+  $('appstatus').textContent = 'Survey stopped';
+  saveData();
+  draw();
+  toast('Survey stopped.');
+}
+
+function togglePause() {
+  if (!surveying) return toast('No survey is running.');
+
+  if (!paused) {
+    elapsedBeforePause += (Date.now() - startedAt) / 1000;
+    paused = true;
+    sendCommand('SURVEY,PAUSE');
+    $('pause').textContent = '▶ Resume';
+  } else {
+    paused = false;
+    startedAt = Date.now();
+    sendCommand('SURVEY,RESUME');
+    $('pause').textContent = '❚❚ Pause';
+  }
+  draw();
+}
+
+$('start').onclick = startSurvey;
+$('stop').onclick = stopSurvey;
+$('pause').onclick = togglePause;
+
+/* ==================== SAFE MANUAL CONTROLS ==================== */
+
+function stopManualMovement() {
+  if (manualPointer !== null) {
+    clearInterval(manualPointer.timer);
+    manualPointer = null;
+    sendCommand('CMD,X');
+  }
+}
+
+document.querySelectorAll('[data-m]').forEach(button => {
+  const direction = button.dataset.m;
+
+  button.addEventListener('pointerdown', event => {
+    event.preventDefault();
+    if (!transport) return toast('Connect to the robot first.');
+    if (manualPointer) stopManualMovement();
+
+    sendCommand('CMD,' + direction);
+    const timer = setInterval(() => {
+      if (transport) sendCommand('CMD,' + direction);
+    }, 350);
+
+    manualPointer = { timer };
+    try { button.setPointerCapture(event.pointerId); } catch (_) {}
+  });
+
+  button.addEventListener('pointerup', stopManualMovement);
+  button.addEventListener('pointercancel', stopManualMovement);
+  button.addEventListener('lostpointercapture', stopManualMovement);
+  button.addEventListener('pointerleave', event => {
+    if (event.buttons === 0) stopManualMovement();
+  });
+});
+
+$('estop').onclick = () => {
+  stopManualMovement();
+  stopNavigation();
+  surveying = false;
+  paused = false;
+  const sent = sendCommand('ESTOP');
+  if (sent) {
+    $('appstatus').textContent = 'Emergency stop requested';
+    toast('Stop command sent. Verify the robot physically stops.');
+  } else {
+    toast('No connection. Use the physical emergency-stop switch.');
+  }
+};
+
+$('spdset').oninput = e => $('spdv').textContent = e.target.value;
+$('spdset').onchange = e => sendCommand('SPD,' + e.target.value);
+
+const keyDirections = {
+  ArrowUp: 'F', ArrowDown: 'B',
+  ArrowLeft: 'L', ArrowRight: 'R'
+};
+
+addEventListener('keydown', e => {
+  if (e.target.matches('input,textarea,select')) return;
+  if (keyDirections[e.key] && !e.repeat) {
+    e.preventDefault();
+    sendCommand('CMD,' + keyDirections[e.key]);
+  }
+  if (e.key === 'Escape' || e.key === ' ') {
+    e.preventDefault();
+    $('estop').click();
+  }
+});
+
+addEventListener('keyup', e => {
+  if (keyDirections[e.key]) sendCommand('CMD,X');
+});
+
+/* ==================== VOICE ASSISTANT ==================== */
+
+const SpeechRecognitionAPI =
+  window.SpeechRecognition || window.webkitSpeechRecognition;
+
+$('voice').onclick = () => {
+  if (!SpeechRecognitionAPI) {
+    return toast('Speech recognition is unavailable in this browser.');
+  }
+
+  if (listening) {
+    listening = false;
+    try { recognition.stop(); } catch (_) {}
+    $('voice').textContent = '🎤 Start Voice';
+    return;
+  }
+
+  recognition = new SpeechRecognitionAPI();
+  recognition.lang = 'en-US';
+  recognition.continuous = true;
+  recognition.interimResults = false;
+
+  recognition.onresult = e => {
+    const result = e.results[e.results.length - 1];
+    if (result && result.isFinal) voiceCommand(result[0].transcript);
+  };
+
+  recognition.onerror = e => {
+    log('Speech recognition error: ' + e.error, 'warn');
+  };
+
+  recognition.onend = () => {
+    if (listening) {
+      try { recognition.start(); } catch (_) {}
+    }
+  };
+
+  listening = true;
+  recognition.start();
+  $('voice').textContent = '🎤 Listening…';
+};
+
+function normalizeWords(text) {
+  const words = {
+    zero: '0', one: '1', two: '2', three: '3',
+    four: '4', five: '5', six: '6', seven: '7',
+    eight: '8', nine: '9', ten: '10'
+  };
+
+  return text.toLowerCase()
+    .replace(/[.,!?]/g, '')
+    .replace(/\b(zero|one|two|three|four|five|six|seven|eight|nine|ten)\b/g,
+      word => words[word])
+    .trim();
+}
+
+function voiceCommand(text) {
+  const s = normalizeWords(text);
+  log('Voice: ' + s);
+
+  if (/^start survey$/.test(s)) {
+    if (confirm('Start the survey?')) startSurvey();
+  } else if (/^(stop survey|finish survey|end survey)$/.test(s)) {
+    stopSurvey();
+  } else if (/^(stop robot|emergency stop|stop)$/.test(s)) {
+    $('estop').click();
+  } else if (/^pause survey$/.test(s)) {
+    if (surveying && !paused) togglePause();
+  } else if (/^(resume survey|continue survey)$/.test(s)) {
+    if (surveying && paused) togglePause();
+  } else if (/^(show map|fit map)$/.test(s)) {
+    $('fit').click();
+  } else if (/^show 3d map$/.test(s)) {
+    $('b3d').click();
+  } else if (/^show 2d map$/.test(s)) {
+    $('b2d').click();
+  } else if (/^(analyze map|analyse map)$/.test(s)) {
+    const values = Object.values(state.cells);
+    say(`${values.length} discovered cells, ` +
+      `${values.filter(v => v === 'f').length} free cells, ` +
+      `${values.filter(v => v === 'o').length} obstacles.`);
+  } else if (/^how many obstacles$/.test(s)) {
+    say(`${Object.values(state.cells).filter(v => v === 'o').length} obstacles.`);
+  } else if (/^how much distance$/.test(s)) {
+    say(`Distance travelled ${robot.distance.toFixed(1)} centimeters.`);
+  } else if (/^battery status$/.test(s)) {
+    say(robot.battery === null ? 'Battery information unavailable.' :
+      `Battery ${robot.battery} percent.`);
+  } else if (/^speed to \d+$/.test(s)) {
+    const m = /(\d+)/.exec(s);
+    const speed = clamp(Number(m[1]), 10, 100);
+    $('spdset').value = speed;
+    $('spdv').textContent = speed;
+    sendCommand('SPD,' + speed);
+    say('Speed set to ' + speed + ' percent.');
+  } else if (/^go to [a-z]{1,3}\d+$/.test(s)) {
+    const k = resolveDestination(s.replace(/^go to /, ''));
+    if (k) planNavigation(k);
+    else say('Destination not found.');
+  } else if (/^go to .+/.test(s)) {
+    const k = resolveDestination(s.replace(/^go to /, ''));
+    if (k) planNavigation(k);
+    else say('I do not know that destination.');
+  } else if (/^show destination list$/.test(s)) {
+    $('search').focus();
+    say('Destination list is available on screen.');
+  } else {
+    say('Command not recognized.');
+  }
+}
+
+/* ==================== VIEW CONTROLS ==================== */
+
+$('b2d').onclick = () => {
+  $('grid').classList.remove('d3');
+  $('b2d').classList.add('on');
+  $('b3d').classList.remove('on');
+};
+
+$('b3d').onclick = () => {
+  $('grid').classList.add('d3');
+  $('b3d').classList.add('on');
+  $('b2d').classList.remove('on');
+};
+
+$('zin').onclick = () => {
+  zoom = Math.min(70, zoom + 4);
+  draw();
+};
+
+$('zout').onclick = () => {
+  zoom = Math.max(10, zoom - 4);
+  draw();
+};
+
+$('fit').onclick = () => {
+  const w = $('view').clientWidth - 30;
+  const h = $('view').clientHeight - 30;
+  zoom = clamp(Math.floor(Math.min(
+    w / state.gridW, h / state.gridH
+  )) - 2, 10, 60);
+  draw();
+};
+
+$('search').oninput = renderList;
+
+/* ==================== DATA IMPORT / EXPORT ==================== */
+
+function downloadFile(filename, content, type) {
+  const url = URL.createObjectURL(new Blob([content], { type }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+$('exp').onclick = () => {
+  saveData();
+  downloadFile(
+    'smart-map-robot.json',
+    JSON.stringify({
+      version: 2,
+      exportedAt: new Date().toISOString(),
+      state: JSON.parse(snapshot())
+    }, null, 2),
+    'application/json'
+  );
+};
+
+$('backup').onclick = () => {
+  downloadFile(
+    'smart-map-robot-backup.json',
+    snapshot(),
+    'application/json'
+  );
+};
+
+$('csv').onclick = () => {
+  const rows = [['Cell', 'Classification', 'Name', 'X_cm', 'Y_cm']];
+  for (const [k, v] of Object.entries(state.cells)) {
+    const p = parseCell(k);
+    if (!p) continue;
+    rows.push([
+      k,
+      v === 'f' ? 'free' : v === 'o' ? 'obstacle' : 'unknown',
+      state.names[k] || '',
+      p.c * CONFIG.cellCm,
+      p.r * CONFIG.cellCm
+    ]);
+  }
+
+  const csv = rows.map(row =>
+    row.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')
+  ).join('\r\n');
+
+  downloadFile('smart-map-robot.csv', csv, 'text/csv;charset=utf-8');
+};
+
+$('imp').onclick = () => $('file').click();
+
+$('file').onchange = async e => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+
+  try {
+    const d = JSON.parse(await file.text());
+    const normalized = normalizeMapData(d);
+
+    if (!confirm('Import this map and replace the current map?')) return;
+
+    pushUndo();
+    Object.assign(state, normalized);
+    saveData();
+    draw();
+    toast('Map imported and validated.');
+  } catch (err) {
+    log('Import failed: ' + err.message, 'error');
+    toast('Invalid map file.');
+  } finally {
+    e.target.value = '';
+  }
+};
+
+$('savename').onclick = () => {
+  const name = $('mapname').value.trim();
+  if (!name) return toast('Enter a map name.');
+  state.mapName = name.slice(0, 80);
+  saveData();
+  toast('Map name saved.');
+};
+
+$('clr').onclick = () => {
+  if (!confirm('Reset the entire map? Export a backup first if needed.')) return;
+
+  pushUndo();
+  state.cells = {};
+  state.names = {};
+  state.gridW = CONFIG.grid;
+  state.gridH = CONFIG.grid;
+  state.meta = { createdAt: new Date().toISOString(), updatedAt: null };
+  state.robotCell = null;
+  selected = null;
+  destination = null;
+  route = [];
+  resetRobot();
+  saveData();
+  draw();
+  toast('Map reset.');
+};
+
+$('restore').onclick = restoreBackup;
+
+/* ==================== DIAGNOSTICS ==================== */
+
+$('test').onclick = () => {
+  const results = [];
+  const test = (name, fn) => {
+    try {
+      fn();
+      results.push('PASS: ' + name);
+    } catch (e) {
+      results.push('FAIL: ' + name + ' — ' + e.message);
+    }
+  };
+
+  test('Cell conversion A1', () => {
+    const p = parseCell('A1');
+    if (!p || p.c !== 0 || p.r !== 0) throw Error('Wrong coordinate.');
+  });
+
+  test('Cell conversion Z10', () => {
+    const p = parseCell('Z10');
+    if (!p || p.c !== 25 || p.r !== 9) throw Error('Wrong coordinate.');
+  });
+
+  test('Cell conversion AA1', () => {
+    const p = parseCell('AA1');
+    if (!p || p.c !== 26 || p.r !== 0) throw Error('Wrong coordinate.');
+  });
+
+  test('Out-of-bounds cell rejected', () => {
+    if (parseCell('ZZ999')) throw Error('Invalid cell accepted.');
+  });
+
+  test('Map serialization', () => {
+    const copy = JSON.parse(snapshot());
+    if (!copy.cells || !copy.names) throw Error('Missing map fields.');
+  });
+
+  test('A* route respects obstacles', () => {
+    const oldCells = state.cells;
+    const oldW = state.gridW, oldH = state.gridH;
+
+    state.gridW = 3;
+    state.gridH = 3;
+    state.cells = {
+      A1: 'f', B1: 'o', C1: 'f',
+      A2: 'f', B2: 'f', C2: 'f',
+      A3: 'f', B3: 'f', C3: 'f'
+    };
+
+    const path = astar({ c: 0, r: 0 }, { c: 2, r: 0 });
+    if (!path || path.includes('B1')) throw Error('Invalid obstacle route.');
+
+    state.cells = oldCells;
+    state.gridW = oldW;
+    state.gridH = oldH;
+  });
+
+  const summary = results.join('\n');
+  log('LOCAL TEST RESULTS:\n' + summary);
+  $('appstatus').textContent =
+    results.every(r => r.startsWith('PASS')) ? 'Tests passed' : 'Test failures';
+  toast(results.every(r => r.startsWith('PASS'))
+    ? 'All local tests passed.'
+    : 'Some tests failed. Check diagnostics.');
+};
+
+$('clearlog').onclick = () => $('log').textContent = '';
+
+$('exportlog').onclick = () => {
+  downloadFile('smart-map-robot-diagnostics.txt',
+    $('log').textContent, 'text/plain;charset=utf-8');
+};
+
+/* ==================== INITIALIZATION ==================== */
+
+loadData();
+draw();
+
+setInterval(() => {
+  if (surveying && !paused) {
+    $('tim').textContent = formatTime(getElapsed());
+    $('duration').textContent = getElapsed().toFixed(1) + ' s';
+    $('avg').textContent = getElapsed() > 0
+      ? (robot.distance / getElapsed()).toFixed(1) + ' cm/s'
+      : '0 cm/s';
+  }
+
+  if (transportMode === 'LIVE BLE' &&
+      robot.lastTelemetry &&
+      Date.now() - robot.lastTelemetry > 5000) {
+    $('telstatus').textContent = 'Telemetry stale';
+  }
+}, 500);
+
+addEventListener('beforeunload', () => {
+  if (transport && (surveying || moving)) {
+    try {
+      transport.send('CMD,X\n');
+    } catch (_) {}
+  }
+});
+
+$('appstatus').textContent = 'Ready';
+$('telstatus').textContent = 'Waiting for telemetry';
+log('Smart Map Robot initialized.');
+</script>
+</body>
+</html>
